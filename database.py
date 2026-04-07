@@ -83,17 +83,49 @@ def add_transaction(date, amount, type, category_id, description = None):
     """, (date, amount, type, category_id, description))
     conn.commit()
     conn.close()
+    
+def get_transactions(type = None, category_id = None, start_date = None, end_date = None, search_text = None, order_by = None, order_dir = "ASC"):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    query = "SELECT * FROM transactions WHERE 1=1"
+    params = []
+    if type is not None:
+        query += " AND type = ?"
+        params.append(type)
+    
+    if category_id is not None:
+        query += " AND category_id = ?"
+        params.append(category_id)
+    
+    if start_date is not None:
+        query += " AND date >= ?"
+        params.append(start_date)
+        
+    if end_date is not None:
+        query += " AND date <= ?"
+        params.append(end_date)
+    
+    if search_text is not None:
+        query += " AND description LIKE ?"
+        params.append(f"%{search_text}%")
+        
+    if order_by is not None:
+        allowed_columns = ["date", "amount", "type", "category_id", "description"]
+        if order_by in allowed_columns:
+            if order_dir.upper() in ["ASC", "DESC"]:
+                query += f" ORDER BY {order_by} {order_dir.upper()}"
+            else:
+                query += f" ORDER BY {order_by} ASC"
+        
+    
+    
+        
+    cursor.execute(query, params)    
+    results = cursor.fetchall()
+    conn.close()
+    return results
    
 if __name__ == '__main__':
     initialize_db()
-    print("Database initialized")
-    add_category("Reinigung")
-    add_category("Holz")
-    add_category("Putzmittel", parent_id=1)
-    print(get_categories())
-
-    update_category(1, "Haushalt")
-    print(get_categories())
-
-    delete_category(2)
-    print(get_categories())
+    
