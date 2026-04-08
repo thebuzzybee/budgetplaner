@@ -58,6 +58,14 @@ class DatabaseManager:
         conn.close()
         return results
 
+    def get_all_categories(self):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, parent_id FROM categories")
+        results = cursor.fetchall()
+        conn.close()
+        return results
+
     def update_category(self, category_id, new_name):
         conn = self._get_connection()
         cursor = conn.cursor()

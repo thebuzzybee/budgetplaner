@@ -24,13 +24,14 @@ class BudgetPlannerApp(ctk.CTk):
 
         frame_tree = ctk.CTkFrame(self.tab_categories)
         frame_tree.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        self.tree = ttk.Treeview(frame_tree, columns=("ID", "Name", "Maincategory"), show="tree headings")
-        self.tree.heading("#0", text="")
+
+        self.tree = ttk.Treeview(frame_tree, columns=("ID", "Parent-ID"), show="tree headings")
+        self.tree.heading("#0", text="Category")
         self.tree.heading("ID", text="ID")
-        self.tree.heading("Name", text="Name")
-        self.tree.heading("Maincategory", text="Maincategory")
-        self.tree.column("#0", width=0, stretch=False)
+        self.tree.heading("Parent-ID", text="Parent-ID")
+        self.tree.column("#0", width=200)
+        self.tree.column("ID", width=50)
+        self.tree.column("Parent-ID", width=80)
         self.tree.pack(fill="both", expand=True)
         
         frame_buttons = ctk.CTkFrame(self.tab_categories)
@@ -50,18 +51,18 @@ class BudgetPlannerApp(ctk.CTk):
     def load_categories(self):
         self.tree.delete(*self.tree.get_children())
         self.category_map = {}
-        rows = self.db.get_categories()
+        rows = self.db.get_all_categories()
         for row in rows:
             category_id, name, parent_id = row
             if parent_id is None:
-                tree_id = self.tree.insert("", "end", values=(category_id, name, parent_id))
+                tree_id = self.tree.insert("", "end", text=name, values=(category_id, parent_id))
                 self.category_map[category_id] = tree_id
                 
         for row in rows:
             category_id, name, parent_id = row
             if parent_id is not None:
                 parent_tree_id = self.category_map[parent_id]
-                tree_id = self.tree.insert(parent_tree_id, "end", values=(category_id, name, parent_id))
+                tree_id = self.tree.insert(parent_tree_id, "end", text=name, values=(category_id, parent_id))
                 self.category_map[category_id] = tree_id            
                 
         
