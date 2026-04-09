@@ -1,5 +1,5 @@
 ﻿import customtkinter as ctk
-from customtkinter import CTkButton
+from customtkinter import CTkButton, CTkToplevel
 
 from databasemanager import DatabaseManager
 from tkinter import ttk
@@ -28,9 +28,9 @@ class BudgetPlannerApp(ctk.CTk):
         self.tree = ttk.Treeview(frame_tree, columns=("ID", "Parent-ID"), show="tree headings")
         self.tree.heading("#0", text="Category")
         self.tree.heading("ID", text="ID")
-        self.tree.heading("Parent-ID", text="Parent-ID")
+        self.tree.heading("Parent-ID", text="Parent")
         self.tree.column("#0", width=200)
-        self.tree.column("ID", width=50)
+        self.tree.column("ID", width=0, stretch = False)
         self.tree.column("Parent-ID", width=80)
         self.tree.pack(fill="both", expand=True)
         
@@ -39,6 +39,7 @@ class BudgetPlannerApp(ctk.CTk):
         
         button_add = CTkButton(frame_buttons, text = "Add")
         button_add.pack(side="left", padx = 5)
+        button_add.configure(command = self.open_add_category_dialog)
         
         button_edit = CTkButton(frame_buttons, text = "Edit")
         button_edit.pack(side="left", padx = 5)
@@ -52,19 +53,62 @@ class BudgetPlannerApp(ctk.CTk):
         self.tree.delete(*self.tree.get_children())
         self.category_map = {}
         rows = self.db.get_all_categories()
+        name_by_id = {category_id: name for category_id, name, parent_id in rows}
         for row in rows:
             category_id, name, parent_id = row
             if parent_id is None:
-                tree_id = self.tree.insert("", "end", text=name, values=(category_id, parent_id))
+                tree_id = self.tree.insert("", "end", text=name, values=(category_id, ""))
                 self.category_map[category_id] = tree_id
                 
         for row in rows:
             category_id, name, parent_id = row
             if parent_id is not None:
                 parent_tree_id = self.category_map[parent_id]
-                tree_id = self.tree.insert(parent_tree_id, "end", text=name, values=(category_id, parent_id))
+                parent_name = name_by_id[parent_id]
+                tree_id = self.tree.insert(parent_tree_id, "end", text=name, values=(category_id, parent_name))
                 self.category_map[category_id] = tree_id            
-                
+     
+    def open_add_category_dialog(self):
+        dialog = ctk.CTkToplevel(self)
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.focus_force()
+        dialog.title("Add Category")
+        dialog.geometry("500x300")
+        
+        ctk.CTkLabel(dialog, text = "Name: ").pack(pady = 5)
+        name_entry = ctk.CTkEntry(dialog)
+        name_entry.pack(pady = 5)
+        
+        ctk.CTkLabel(dialog, text = "Parent: ").pack(pady = 5)
+        categories = self.db.get_categories()
+        dropdown_names = ["None"]
+        dropdown_ids = [None]
+        
+        for category_id, name, parent_id in categories:
+            dropdown_names.append(name)
+            dropdown_ids.append(category_id)
+            
+        parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names)
+        parent_option.pack(pady = 5)
+        
+        def save():
+            selected_name = name_entry.get().strip()
+            if not selected_name:
+                return
+            selected_parent_name = parent_option.get()
+            if selected_name == "None":
+                parent_id = None
+            else:
+                index = dropdown_names.index(selected_parent_name)
+                parent_id = dropdown_ids[index]
+            
+            self.db.add_category(selected_name, parent_id)
+            dialog.destroy()
+            self.load_categories()
+            
+        ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
+        ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)    
         
 
     def run(self):
