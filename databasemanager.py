@@ -136,6 +136,14 @@ class DatabaseManager:
         conn.close()
         return results
 
+    def get_category_by_id(self, category_id):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name, parent_id FROM categories WHERE id = ?", (category_id,))
+        result = cursor.fetchone()
+        conn.close()
+        return result
+
 if __name__ == "__main__":
     db = DatabaseManager("test.db")
     db.initialize_db()

@@ -43,6 +43,7 @@ class BudgetPlannerApp(ctk.CTk):
         
         button_edit = CTkButton(frame_buttons, text = "Edit")
         button_edit.pack(side="left", padx = 5)
+        button_edit.configure(command = self.open_edit_category_dialog)
         
         button_del = CTkButton(frame_buttons, text = "Delete")
         button_del.pack(side="left", padx = 5)
@@ -110,7 +111,46 @@ class BudgetPlannerApp(ctk.CTk):
         ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
         ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)    
         
+    def show_warning(self, message):
+        popup = ctk.CTkToplevel(self)
+        popup.title("Warning")
+        popup.geometry("300x150")
+    
+        popup.transient(self)
+        popup.grab_set()
+        popup.focus_force()
+    
+        label = ctk.CTkLabel(popup, text = message, wraplength = 250)
+        label.pack(pady = 20)
+        
+        def close_popup():
+            popup.destroy()
+            
+        ok_button = ctk.CTkButton(popup, text = "OK", command = close_popup)
+        ok_button.pack(pady = 10)
+    
+    def open_edit_category_dialog(self):
+        selected = self.tree.selection()
+        if len(selected) == 0:
+            self.show_warning("Please select a category to edit")
+        elif len(selected) > 1:
+            self.show_warning("Please select only one category to edit")
+        else:
+            selected_iid = selected[0]
+            values = self.tree.item(selected_iid, "values")
+            category_id = values[0]
+            conn = self.db.get_category_by_id()
+            cursor = conn.cursor()
+            cursor.execute("SELECT name, parent_id FROM categories WHERE id = ?",(category_id,))
+            result = cursor.fetchone()
+            conn.close()
+            
+            current_name, current_parent_id = result
+            print(current_name, current_parent_id)
 
+           
+        
+    
     def run(self):
         self.mainloop()
 
