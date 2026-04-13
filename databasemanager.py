@@ -66,12 +66,12 @@ class DatabaseManager:
         conn.close()
         return results
 
-    def update_category(self, category_id, new_name):
+    def update_category(self, category_id, new_name, new_parent_id):
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE categories SET name = ? WHERE id = ?
-            """, (new_name, category_id))
+            """, (new_name, new_parent_id, category_id))
         conn.commit()
         conn.close()
 

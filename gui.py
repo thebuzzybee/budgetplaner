@@ -98,7 +98,7 @@ class BudgetPlannerApp(ctk.CTk):
             if not selected_name:
                 return
             selected_parent_name = parent_option.get()
-            if selected_name == "None":
+            if selected_parent_name == "None":
                 parent_id = None
             else:
                 index = dropdown_names.index(selected_parent_name)
@@ -109,8 +109,9 @@ class BudgetPlannerApp(ctk.CTk):
             self.load_categories()
             
         ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
-        ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)    
-        
+        ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
+
+    
     def show_warning(self, message):
         popup = ctk.CTkToplevel(self)
         popup.title("Warning")
@@ -138,15 +139,57 @@ class BudgetPlannerApp(ctk.CTk):
         else:
             selected_iid = selected[0]
             values = self.tree.item(selected_iid, "values")
-            category_id = values[0]
-            conn = self.db.get_category_by_id()
-            cursor = conn.cursor()
-            cursor.execute("SELECT name, parent_id FROM categories WHERE id = ?",(category_id,))
-            result = cursor.fetchone()
-            conn.close()
-            
+            category_id_being_edited = values[0]
+            result = self.db.get_category_by_id(category_id_being_edited)
             current_name, current_parent_id = result
             print(current_name, current_parent_id)
+            dialog = ctk.CTkToplevel(self)
+            dialog.transient(self)
+            dialog.grab_set()
+            dialog.focus_force()
+            dialog.title("Edit Category")
+            dialog.geometry("500x300")
+
+            ctk.CTkLabel(dialog, text = "Name: ").pack(pady = 5)
+            name_entry = ctk.CTkEntry(dialog)
+            name_entry.insert(0, current_name)
+            name_entry.pack(pady = 5)
+
+            ctk.CTkLabel(dialog, text = "Parent: ").pack(pady = 5)
+            categories = self.db.get_categories()
+            dropdown_names = ["None"]
+            dropdown_ids = [None]
+
+            for cat_id, name, parent_id in categories:
+                if cat_id != category_id_being_edited:
+                    dropdown_names.append(name)
+                    dropdown_ids.append(cat_id)
+
+            parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names)
+            parent_option.pack(pady = 5)
+            if current_parent_id is None:
+                parent_option.set("None")
+            else:
+                index = dropdown_ids.index(current_parent_id)
+                parent_option.set(dropdown_names[index])
+
+            def save():
+                selected_name = name_entry.get().strip()
+                if not selected_name:
+                    return
+                selected_parent_name = parent_option.get()
+                if selected_parent_name == "None":
+                    parent_id = None
+                else:
+                    index = dropdown_names.index(selected_parent_name)
+                    parent_id = dropdown_ids[index]
+
+                self.db.update_category(category_id_being_edited, selected_name , parent_id)
+                dialog.destroy()
+                self.load_categories()
+
+            ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
+            ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
 
            
         
