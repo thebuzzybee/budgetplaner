@@ -85,19 +85,42 @@ class BudgetPlannerApp(ctk.CTk):
         categories = self.db.get_categories()
         dropdown_names = ["None"]
         dropdown_ids = [None]
-        subcategories_names = ["None"]
-        subcategories_ids = [None]
         
         for category_id, name, parent_id in categories:
             dropdown_names.append(name)
             dropdown_ids.append(category_id)
+        
+        def on_parent_selected(selected_parent_name):
+            index = dropdown_names.index(selected_parent_name)
+            parent_id = dropdown_ids[index]
             
-        parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names)
+            if self.db.has_children(parent_id):
+                children = self.db.get_children(parent_id)
+
+                self.child_names = ["None"]
+                self.child_ids = [None]
+                
+                for cat_id, name in children:
+                    self.child_names.append(name)
+                    self.child_ids.append(cat_id)
+
+                child_option.configure(values=self.child_names, state="normal")
+                child_option.set("None")
+                
+            else:
+                child_option.configure(values=["None"], state="disabled")
+                child_option.set("None")
+                    
+            print(f"Selected parent: {selected_parent_name}")
+            
+            
+        parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names, command = on_parent_selected)
         parent_option.pack(pady = 5)
 
         ctk.CTkLabel(dialog, text = "Subcategory: ").pack(pady = 10)
         
-        child_option = ctk.CTkOptionMenu(dialog, values = subcategories_names, state = "disabled")
+        child_option = ctk.CTkOptionMenu(dialog, state = "disabled")
+        child_option.set("None")
         child_option.pack(pady = 5)
         
         def save():
@@ -108,8 +131,13 @@ class BudgetPlannerApp(ctk.CTk):
             if selected_parent_name == "None":
                 parent_id = None
             else:
-                index = dropdown_names.index(selected_parent_name)
-                parent_id = dropdown_ids[index]
+                if child_option.get() == "None" or child_option.cget("state") == "disabled":
+                    index = dropdown_names.index(selected_parent_name)
+                    parent_id = dropdown_ids[index]
+                else:
+                    index = self.child_names.index(child_option.get())
+                    parent_id = self.child_ids[index]
+                    
             
             self.db.add_category(selected_name, parent_id)
             dialog.destroy()
