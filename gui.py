@@ -85,6 +85,8 @@ class BudgetPlannerApp(ctk.CTk):
         categories = self.db.get_categories()
         dropdown_names = ["None"]
         dropdown_ids = [None]
+        subcategories_names = ["None"]
+        subcategories_ids = [None]
         
         for category_id, name, parent_id in categories:
             dropdown_names.append(name)
@@ -92,6 +94,11 @@ class BudgetPlannerApp(ctk.CTk):
             
         parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names)
         parent_option.pack(pady = 5)
+
+        ctk.CTkLabel(dialog, text = "Subcategory: ").pack(pady = 10)
+        
+        child_option = ctk.CTkOptionMenu(dialog, values = subcategories_names, state = "disabled")
+        child_option.pack(pady = 5)
         
         def save():
             selected_name = name_entry.get().strip()
@@ -111,25 +118,6 @@ class BudgetPlannerApp(ctk.CTk):
         ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
         ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
 
-    
-    def show_warning(self, message):
-        popup = ctk.CTkToplevel(self)
-        popup.title("Warning")
-        popup.geometry("300x150")
-    
-        popup.transient(self)
-        popup.grab_set()
-        popup.focus_force()
-    
-        label = ctk.CTkLabel(popup, text = message, wraplength = 250)
-        label.pack(pady = 20)
-        
-        def close_popup():
-            popup.destroy()
-            
-        ok_button = ctk.CTkButton(popup, text = "OK", command = close_popup)
-        ok_button.pack(pady = 10)
-    
     def open_edit_category_dialog(self):
         selected = self.tree.selection()
         if len(selected) == 0:
@@ -139,10 +127,9 @@ class BudgetPlannerApp(ctk.CTk):
         else:
             selected_iid = selected[0]
             values = self.tree.item(selected_iid, "values")
-            category_id_being_edited = values[0]
+            category_id_being_edited = int(values[0])
             result = self.db.get_category_by_id(category_id_being_edited)
             current_name, current_parent_id = result
-            print(current_name, current_parent_id)
             dialog = ctk.CTkToplevel(self)
             dialog.transient(self)
             dialog.grab_set()
@@ -173,6 +160,7 @@ class BudgetPlannerApp(ctk.CTk):
                 index = dropdown_ids.index(current_parent_id)
                 parent_option.set(dropdown_names[index])
 
+
             def save():
                 selected_name = name_entry.get().strip()
                 if not selected_name:
@@ -184,12 +172,67 @@ class BudgetPlannerApp(ctk.CTk):
                     index = dropdown_names.index(selected_parent_name)
                     parent_id = dropdown_ids[index]
 
+                if parent_id != current_parent_id:
+                    if self.db.has_children(category_id_being_edited):
+                        confirmed = self.ask_confirmation("This category has subcategories.Moving it will also move them. Continue?")
+                        if not confirmed:
+                            return
+
                 self.db.update_category(category_id_being_edited, selected_name , parent_id)
                 dialog.destroy()
                 self.load_categories()
 
             ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
             ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
+    
+    
+    def show_warning(self, message):
+        popup = ctk.CTkToplevel(self)
+        popup.title("Warning")
+        popup.geometry("300x150")
+    
+        popup.transient(self)
+        popup.grab_set()
+        popup.focus_force()
+    
+        label = ctk.CTkLabel(popup, text = message, wraplength = 250)
+        label.pack(pady = 20)
+        
+        def close_popup():
+            popup.destroy()
+            
+        ok_button = ctk.CTkButton(popup, text = "OK", command = close_popup)
+        ok_button.pack(pady = 10)
+    
+    def ask_confirmation(self, message):
+        result = [False]
+        popup = ctk.CTkToplevel(self)
+        popup.title("Warning")
+        popup.geometry("300x150")
+
+        popup.transient(self)
+        popup.grab_set()
+        popup.focus_force()
+
+        label = ctk.CTkLabel(popup, text = message, wraplength = 250)
+        label.pack(pady = 20)
+        
+        def confirm():
+            result[0] = True
+            popup.destroy()
+        def close_popup():
+            popup.destroy()
+
+        confirm_button = ctk.CTkButton(popup, text = "Confirm", command = confirm)
+        confirm_button.pack(pady = 0)
+        
+        cancel_button = ctk.CTkButton(popup, text = "Cancel", command = close_popup)
+        cancel_button.pack(pady = 10)
+        
+        popup.wait_window()
+        return result[0]
+    
+    
 
            
         

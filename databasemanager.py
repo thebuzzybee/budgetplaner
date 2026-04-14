@@ -66,11 +66,19 @@ class DatabaseManager:
         conn.close()
         return results
 
+    def get_children(self, parent_id):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM categories WHERE parent_id = ? ",(parent_id,))
+        results = cursor.fetchall()
+        conn.close()
+        return results
+    
     def update_category(self, category_id, new_name, new_parent_id):
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE categories SET name = ? WHERE id = ?
+            UPDATE categories SET name = ?, parent_id = ? WHERE id = ?
             """, (new_name, new_parent_id, category_id))
         conn.commit()
         conn.close()
@@ -143,7 +151,14 @@ class DatabaseManager:
         result = cursor.fetchone()
         conn.close()
         return result
-
+    
+    def has_children(self, category_id):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(""" SELECT 1 FROM categories WHERE parent_id = ? LIMIT 1 """, (category_id,))
+        result = cursor.fetchone()
+        conn.close()
+        return result if not None else False
+    
 if __name__ == "__main__":
-    db = DatabaseManager("test.db")
     db.initialize_db()
