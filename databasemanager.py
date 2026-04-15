@@ -87,7 +87,21 @@ class DatabaseManager:
         children = cursor.fetchall()
         conn.close()
         return roots + children
+
+    def get_root_ancestor(self, category_id):
+        conn = self._get_connection()
+        cursor = conn.cursor()
     
+        current_id = category_id
+        while True:
+            cursor.execute("SELECT parent_id FROM categories WHERE id = ?", (current_id,))
+            result = cursor.fetchone()
+            if result is None or result[0] is None:
+                break
+            current_id = result[0]
+    
+        conn.close()
+        return current_id
     
     def update_category(self, category_id, new_name, new_parent_id):
         conn = self._get_connection()

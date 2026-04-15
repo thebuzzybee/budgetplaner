@@ -171,24 +171,68 @@ class BudgetPlannerApp(ctk.CTk):
             name_entry.pack(pady = 5)
 
             ctk.CTkLabel(dialog, text = "Parent: ").pack(pady = 5)
-            categories = self.db.get_categories_and_children()
+            categories = self.db.get_categories()
             dropdown_names = ["None"]
             dropdown_ids = [None]
-
-            for cat_id, name in categories:
-                if cat_id != category_id_being_edited:
-                    dropdown_names.append(name)
-                    dropdown_ids.append(cat_id)
-
-            parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names)
+    
+            for category_id, name, parent_id in categories:
+                dropdown_names.append(name)
+                dropdown_ids.append(category_id)
+    
+            def on_parent_selected(selected_parent_name):
+                index = dropdown_names.index(selected_parent_name)
+                parent_id = dropdown_ids[index]
+    
+                if self.db.has_children(parent_id):
+                    children = self.db.get_children(parent_id)
+    
+                    self.child_names = ["None"]
+                    self.child_ids = [None]
+    
+                    for cat_id, name in children:
+                        self.child_names.append(name)
+                        self.child_ids.append(cat_id)
+    
+                    child_option.configure(values=self.child_names, state="normal")
+                    child_option.set("None")
+    
+                else:
+                    child_option.configure(values=["None"], state="disabled")
+                    child_option.set("None")
+    
+                print(f"Selected parent: {selected_parent_name}")
+    
+    
+            parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names, command = on_parent_selected)
             parent_option.pack(pady = 5)
+    
+            ctk.CTkLabel(dialog, text = "Subcategory: ").pack(pady = 10)
+    
+            child_option = ctk.CTkOptionMenu(dialog, state = "disabled")
+            child_option.set("None")
+            child_option.pack(pady = 5)
+
             if current_parent_id is None:
+            
                 parent_option.set("None")
+                child_option.configure(state="disabled")
             else:
-                index = dropdown_ids.index(current_parent_id)
-                parent_option.set(dropdown_names[index])
-
-
+            
+                if current_parent_id in dropdown_ids:
+                    index = dropdown_ids.index(current_parent_id)
+                    root_name = dropdown_names[index]
+                    parent_option.set(root_name)
+                    on_parent_selected(root_name)
+                    child_option.set("None")
+                else:
+                    root_id = self.db.get_root_ancestor(current_parent_id)                
+                    root_index = dropdown_ids.index(root_id)
+                    root_name = dropdown_names[root_index]
+                    parent_option.set(root_name)
+                    on_parent_selected(root_name)
+                    if current_parent_id in self.child_ids:
+                        child_index = self.child_ids.index(current_parent_id)
+                        child_option.set(self.child_names[child_index])
             def save():
                 selected_name = name_entry.get().strip()
                 if not selected_name:
@@ -197,15 +241,15 @@ class BudgetPlannerApp(ctk.CTk):
                 if selected_parent_name == "None":
                     parent_id = None
                 else:
-                    index = dropdown_names.index(selected_parent_name)
-                    parent_id = dropdown_ids[index]
-
-                if parent_id != current_parent_id:
-                    if self.db.has_children(category_id_being_edited):
-                        self.show_warning("Cannot move: Category has subcategories. Delete or move subcategories first.")
-                        return
-
-                self.db.update_category(category_id_being_edited, selected_name , parent_id)
+                    if child_option.get() == "None" or child_option.cget("state") == "disabled":
+                        index = dropdown_names.index(selected_parent_name)
+                        parent_id = dropdown_ids[index]
+                    else:
+                        index = self.child_names.index(child_option.get())
+                        parent_id = self.child_ids[index]
+    
+    
+                self.db.update_category(category_id_being_edited, selected_name, parent_id)
                 dialog.destroy()
                 self.load_categories()
 
