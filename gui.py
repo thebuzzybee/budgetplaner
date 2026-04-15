@@ -171,11 +171,11 @@ class BudgetPlannerApp(ctk.CTk):
             name_entry.pack(pady = 5)
 
             ctk.CTkLabel(dialog, text = "Parent: ").pack(pady = 5)
-            categories = self.db.get_categories()
+            categories = self.db.get_categories_and_children()
             dropdown_names = ["None"]
             dropdown_ids = [None]
 
-            for cat_id, name, parent_id in categories:
+            for cat_id, name in categories:
                 if cat_id != category_id_being_edited:
                     dropdown_names.append(name)
                     dropdown_ids.append(cat_id)
@@ -202,9 +202,8 @@ class BudgetPlannerApp(ctk.CTk):
 
                 if parent_id != current_parent_id:
                     if self.db.has_children(category_id_being_edited):
-                        confirmed = self.ask_confirmation("This category has subcategories.Moving it will also move them. Continue?")
-                        if not confirmed:
-                            return
+                        self.show_warning("Cannot move: Category has subcategories. Delete or move subcategories first.")
+                        return
 
                 self.db.update_category(category_id_being_edited, selected_name , parent_id)
                 dialog.destroy()

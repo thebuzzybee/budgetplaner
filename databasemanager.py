@@ -73,6 +73,21 @@ class DatabaseManager:
         results = cursor.fetchall()
         conn.close()
         return results
+
+    def get_categories_and_children(self):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM categories WHERE parent_id IS NULL")
+        roots = cursor.fetchall()
+        cursor.execute("""
+            SELECT id, name FROM categories 
+            WHERE parent_id IS NULL 
+            OR parent_id IN (SELECT id FROM categories WHERE parent_id IS NULL)
+        """)
+        children = cursor.fetchall()
+        conn.close()
+        return roots + children
+    
     
     def update_category(self, category_id, new_name, new_parent_id):
         conn = self._get_connection()
