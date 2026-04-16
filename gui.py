@@ -47,6 +47,7 @@ class BudgetPlannerApp(ctk.CTk):
         
         button_del = CTkButton(frame_buttons, text = "Delete")
         button_del.pack(side="left", padx = 5)
+        button_del.configure(command = self.on_delete_button_click)
         
         self.load_categories()
         
@@ -176,8 +177,9 @@ class BudgetPlannerApp(ctk.CTk):
             dropdown_ids = [None]
     
             for category_id, name, parent_id in categories:
-                dropdown_names.append(name)
-                dropdown_ids.append(category_id)
+                if category_id != category_id_being_edited:
+                    dropdown_names.append(name)
+                    dropdown_ids.append(category_id)
     
             def on_parent_selected(selected_parent_name):
                 index = dropdown_names.index(selected_parent_name)
@@ -190,8 +192,9 @@ class BudgetPlannerApp(ctk.CTk):
                     self.child_ids = [None]
     
                     for cat_id, name in children:
-                        self.child_names.append(name)
-                        self.child_ids.append(cat_id)
+                        if cat_id != category_id_being_edited:
+                            self.child_names.append(name)
+                            self.child_ids.append(cat_id)
     
                     child_option.configure(values=self.child_names, state="normal")
                     child_option.set("None")
@@ -213,7 +216,6 @@ class BudgetPlannerApp(ctk.CTk):
             child_option.pack(pady = 5)
 
             if current_parent_id is None:
-            
                 parent_option.set("None")
                 child_option.configure(state="disabled")
             else:
@@ -239,23 +241,56 @@ class BudgetPlannerApp(ctk.CTk):
                     return
                 selected_parent_name = parent_option.get()
                 if selected_parent_name == "None":
-                    parent_id = None
+                    new_parent_id = None
                 else:
                     if child_option.get() == "None" or child_option.cget("state") == "disabled":
                         index = dropdown_names.index(selected_parent_name)
-                        parent_id = dropdown_ids[index]
+                        new_parent_id = dropdown_ids[index]
                     else:
                         index = self.child_names.index(child_option.get())
-                        parent_id = self.child_ids[index]
+                        new_parent_id = self.child_ids[index]
+                if new_parent_id != current_parent_id:  
+                    if self.db.has_children(category_id_being_edited):
+                        self.show_warning("Cannot move: category has subcategories. Delete or move subcategories first.")
+                        return
     
-    
-                self.db.update_category(category_id_being_edited, selected_name, parent_id)
+                self.db.update_category(category_id_being_edited, selected_name, new_parent_id)
                 dialog.destroy()
                 self.load_categories()
 
             ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
             ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
+
+
+    def on_delete_button_click(self):
+        selected = self.tree.selection()
+        if len(selected) == 0:
+            self.show_warning("Please select a category to delete")
+            return
+        elif len(selected) > 1:
+            self.show_warning("Please select only one category to delete")
+            return
     
+        selected_iid = selected[0]
+        values = self.tree.item(selected_iid, "values")
+        category_id = int(values[0])
+
+        result = self.db.get_category_by_id(category_id)
+        name = result[0]
+
+        total = self.db.count_descendants(category_id)
+
+        if total == 1:
+            message = f"Delete '{name}'?"
+        else:
+            message = f"Delete '{name}' and {total-1} subcategories?"
+    
+
+        confirmed = self.ask_confirmation(message)
+    
+        if confirmed:
+            self.db.delete_category_recursive(category_id)
+            self.load_categories()
     
     def show_warning(self, message):
         popup = ctk.CTkToplevel(self)

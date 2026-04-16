@@ -16,7 +16,7 @@ class DatabaseManager:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 parent_id INTEGER,
-                FOREIGN KEY (parent_id) REFERENCES categories(id)
+                FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE CASCADE
                 )
             """)
 
@@ -121,6 +121,24 @@ class DatabaseManager:
         conn.commit()
         conn.close()
 
+    def delete_category_recursive(self, category_id):
+        count = 0
+        children = self.get_children(category_id)
+        for child_id, name in children:
+            count += self.delete_category_recursive(child_id)
+        self.delete_category(category_id)
+        count += 1    
+        return count
+
+    def count_descendants(self, category_id):
+        count = 1
+
+        children = self.get_children(category_id)
+        for child_id, _ in children:
+            count += self.count_descendants(child_id)
+
+        return count
+    
     def add_transaction(self, date, amount, type, category_id, description = None):
         conn = self._get_connection()
         cursor = conn.cursor()
