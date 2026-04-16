@@ -14,7 +14,10 @@ class BudgetPlannerApp(ctk.CTk):
         self.db.initialize_db()
 
         self.create_widgets()
-
+        
+    def run(self):
+        self.mainloop()
+        
     def create_widgets(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(fill="both", expand=True)
@@ -343,8 +346,7 @@ class BudgetPlannerApp(ctk.CTk):
            
         
     
-    def run(self):
-        self.mainloop()
+    
 
 if __name__ == "__main__":
     app = BudgetPlannerApp()
