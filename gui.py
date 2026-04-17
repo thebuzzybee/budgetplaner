@@ -25,6 +25,23 @@ class BudgetPlannerApp(ctk.CTk):
         self.tab_transactions = self.tabview.add("Transactions")
         self.tab_categories = self.tabview.add("Categories")
 
+        self.left_frame = ctk.CTkFrame(self.tab_categories, width = 200, fg_color="midnight blue")
+        self.left_frame.pack(side="left", fill = "y", padx = 5, pady = 5)
+        
+        self.right_frame = ctk.CTkFrame(self.tab_categories, fg_color = "midnight blue")
+        self.right_frame.pack(side="left", fill = "both", expand = True, padx=5, pady=5)
+        
+        self.category_view = ctk.CTkScrollableFrame(self.left_frame, 
+                                                    label_text = "Your Categories", 
+                                                    label_text_color = "LightSkyBlue1", 
+                                                    label_fg_color = "RoyalBlue1", 
+                                                    scrollbar_button_color = "RoyalBlue1" , 
+                                                    scrollbar_button_hover_color = "RoyalBlue4", 
+                                                    height = 400, 
+                                                    fg_color = "RoyalBlue3")
+        
+        ctk.CTkLabel(self.right_frame, text="New Form Here").pack(pady=50)
+
         frame_tree = ctk.CTkFrame(self.tab_categories)
         frame_tree.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -40,9 +57,15 @@ class BudgetPlannerApp(ctk.CTk):
         frame_buttons = ctk.CTkFrame(self.tab_categories)
         frame_buttons.pack(fill="x", padx = 10, pady = 10)
         
-        button_add = CTkButton(frame_buttons, text = "Add")
-        button_add.pack(side="left", padx = 5)
+        button_add = CTkButton(self.left_frame, text = "Add Category", width = 140, height = 30, border_width = 2, border_color = "LightSkyBlue1", fg_color = "RoyalBlue3", hover_color = "navy", text_color = "LightSkyBlue1")
+        button_add.pack(side="bottom",  expand = True, padx = 5)
         button_add.configure(command = self.open_add_category_dialog)
+        button_add.bind("<Enter>", lambda event: button_add.configure(text_color = "alice blue", border_color = "alice blue", fg_color = "navy"))
+        button_add.bind("<Leave>", lambda event: button_add.configure(text_color = "LightSkyBlue1", fg_color = "RoyalBlue3", border_color = "LightSkyBlue1"))
+        
+        
+        self.category_view.pack(side="bottom", fill = "both", expand = True, padx=5, pady = 5)
+        
         
         button_edit = CTkButton(frame_buttons, text = "Edit")
         button_edit.pack(side="left", padx = 5)
