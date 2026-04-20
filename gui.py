@@ -9,6 +9,7 @@ class BudgetPlannerApp(ctk.CTk):
         super().__init__()
         self.title("Budget Planer")
         self.geometry("1000x600")
+        self.configure(fg_color = ("SkyBlue1", "SkyBlue4"))
         
         self.db = DatabaseManager()
         self.db.initialize_db()
@@ -21,15 +22,20 @@ class BudgetPlannerApp(ctk.CTk):
     def create_widgets(self):
         self.tabview = ctk.CTkTabview(self)
         self.tabview.pack(fill="both", expand=True)
+        self.tabview.configure(fg_color = ("SkyBlue1", "SkyBlue4"))
         
         self.tab_transactions = self.tabview.add("Transactions")
         self.tab_categories = self.tabview.add("Categories")
 
-        self.left_frame = ctk.CTkFrame(self.tab_categories, width = 200, fg_color="midnight blue")
+        self.left_frame = ctk.CTkFrame(self.tab_categories, width = 200, fg_color = "midnight blue")
         self.left_frame.pack(side="left", fill = "y", padx = 5, pady = 5)
+        self.right_container = ctk.CTkFrame(self.tab_categories, fg_color = "transparent")
+        self.right_container.pack(side = "left", fill = "both", expand = "True", padx = 5, pady = 5)
         
-        self.right_frame = ctk.CTkFrame(self.tab_categories, fg_color = "midnight blue")
-        self.right_frame.pack(side="left", fill = "both", expand = True, padx=5, pady=5)
+        self.right_frame = ctk.CTkFrame(self.right_container, fg_color = "midnight blue")
+        self.right_frame.pack(side="top", fill = "both", expand = True)
+        self.button_bar = ctk.CTkFrame(self.right_container, fg_color = "transparent")
+        self.button_bar.pack(side = "bottom", fill = "x", pady = 5)
         
         self.category_view = ctk.CTkScrollableFrame(self.left_frame, 
                                                     label_text = "Your Categories", 
@@ -39,8 +45,15 @@ class BudgetPlannerApp(ctk.CTk):
                                                     scrollbar_button_hover_color = "RoyalBlue4", 
                                                     height = 400, 
                                                     fg_color = "RoyalBlue3")
-        
-        ctk.CTkLabel(self.right_frame, text="New Form Here").pack(pady=50)
+
+        self.subcategory_view = ctk.CTkScrollableFrame(self.right_frame,
+                                                    label_text = "Subcategories",
+                                                    label_text_color = "LightSkyBlue1",
+                                                    label_fg_color = "RoyalBlue1",
+                                                    scrollbar_button_color = "RoyalBlue1" ,
+                                                    scrollbar_button_hover_color = "RoyalBlue4",
+                                                    height = 400,
+                                                    fg_color = "RoyalBlue3")
 
         frame_tree = ctk.CTkFrame(self.tab_categories)
         frame_tree.pack(fill="both", expand=True, padx=10, pady=10)
@@ -57,58 +70,62 @@ class BudgetPlannerApp(ctk.CTk):
         frame_buttons = ctk.CTkFrame(self.tab_categories)
         frame_buttons.pack(fill="x", padx = 10, pady = 10)
         
-        button_add = CTkButton(self.left_frame, text = "Add Category", width = 140, height = 30, border_width = 2, border_color = "LightSkyBlue1", fg_color = "RoyalBlue3", hover_color = "navy", text_color = "LightSkyBlue1")
-        button_add.pack(side="bottom",  expand = True, padx = 5)
+        button_add = CustomButton(self.button_bar, text = "Add")
+        #button_add = CTkButton(self.left_frame, text = "Add Category", width = 140, height = 30, border_width = 2, border_color = "LightSkyBlue1", fg_color = "RoyalBlue3", hover_color = "navy", text_color = "LightSkyBlue1")
+        
         button_add.configure(command = self.open_add_category_dialog)
-        button_add.bind("<Enter>", lambda event: button_add.configure(text_color = "alice blue", border_color = "alice blue", fg_color = "navy"))
-        button_add.bind("<Leave>", lambda event: button_add.configure(text_color = "LightSkyBlue1", fg_color = "RoyalBlue3", border_color = "LightSkyBlue1"))
+        #button_add.bind("<Enter>", lambda event: button_add.configure(text_color = "alice blue", border_color = "alice blue", fg_color = "navy"))
+        #button_add.bind("<Leave>", lambda event: button_add.configure(text_color = "LightSkyBlue1", fg_color = "RoyalBlue3", border_color = "LightSkyBlue1"))
         
         
         self.category_view.pack(side="bottom", fill = "both", expand = True, padx=5, pady = 5)
+        self.subcategory_view.pack(side="top", fill = "both", expand = True, padx=5, pady = 5)
+        button_add.pack(side="left", padx = 5)
         
-        
-        button_edit = CTkButton(frame_buttons, text = "Edit")
+        button_edit = CustomButton(self.button_bar, text = "Edit")
         button_edit.pack(side="left", padx = 5)
         button_edit.configure(command = self.open_edit_category_dialog)
         
-        button_del = CTkButton(frame_buttons, text = "Delete")
+        button_del = CustomButton(self.button_bar, text = "Delete")
         button_del.pack(side="left", padx = 5)
         button_del.configure(command = self.on_delete_button_click)
         
         self.load_categories()
+    
+    
         
     def load_categories(self):
-        self.tree.delete(*self.tree.get_children())
-        self.category_map = {}
-        rows = self.db.get_all_categories()
-        name_by_id = {category_id: name for category_id, name, parent_id in rows}
-        for row in rows:
-            category_id, name, parent_id = row
-            if parent_id is None:
-                tree_id = self.tree.insert("", "end", text=name, values=(category_id, ""))
-                self.category_map[category_id] = tree_id
-                
-        for row in rows:
-            category_id, name, parent_id = row
-            if parent_id is not None:
-                parent_tree_id = self.category_map[parent_id]
-                parent_name = name_by_id[parent_id]
-                tree_id = self.tree.insert(parent_tree_id, "end", text=name, values=(category_id, parent_name))
-                self.category_map[category_id] = tree_id            
+        for widget in self.category_view.winfo_children():
+            widget.destroy()
+
+        roots = self.db.get_categories(parent_id=None)
+    
+        for cat_id, name, _ in roots:
+            row = ctk.CTkButton(
+                self.category_view,
+                text=name,
+                anchor="w",
+                fg_color="transparent",
+                hover_color="RoyalBlue1",
+                text_color="alice blue",
+                height=35
+            )
+            row.pack(fill="x", pady=2)
+            row.configure(command=lambda cid=cat_id: self.show_category_detail(cid))            
      
     def open_add_category_dialog(self):
-        dialog = ctk.CTkToplevel(self)
+        dialog = CustomTopLevel(self)
         dialog.transient(self)
         dialog.grab_set()
         dialog.focus_force()
         dialog.title("Add Category")
-        dialog.geometry("500x300")
+        dialog.geometry("500x320")
         
-        ctk.CTkLabel(dialog, text = "Name: ").pack(pady = 5)
+        ctk.CTkLabel(dialog, text = "Name: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
         name_entry = ctk.CTkEntry(dialog)
         name_entry.pack(pady = 5)
         
-        ctk.CTkLabel(dialog, text = "Parent: ").pack(pady = 5)
+        ctk.CTkLabel(dialog, text = "Parent: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
         categories = self.db.get_categories()
         dropdown_names = ["None"]
         dropdown_ids = [None]
@@ -139,12 +156,11 @@ class BudgetPlannerApp(ctk.CTk):
                 child_option.set("None")
                     
             print(f"Selected parent: {selected_parent_name}")
-            
-            
+              
         parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names, command = on_parent_selected)
         parent_option.pack(pady = 5)
 
-        ctk.CTkLabel(dialog, text = "Subcategory: ").pack(pady = 10)
+        ctk.CTkLabel(dialog, text = "Subcategory: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 10)
         
         child_option = ctk.CTkOptionMenu(dialog, state = "disabled")
         child_option.set("None")
@@ -170,8 +186,8 @@ class BudgetPlannerApp(ctk.CTk):
             dialog.destroy()
             self.load_categories()
             
-        ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
-        ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
+        CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
+        CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
 
     def open_edit_category_dialog(self):
         selected = self.tree.selection()
@@ -192,12 +208,12 @@ class BudgetPlannerApp(ctk.CTk):
             dialog.title("Edit Category")
             dialog.geometry("500x300")
 
-            ctk.CTkLabel(dialog, text = "Name: ").pack(pady = 5)
+            ctk.CTkLabel(dialog, text = "Name: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
             name_entry = ctk.CTkEntry(dialog)
             name_entry.insert(0, current_name)
             name_entry.pack(pady = 5)
 
-            ctk.CTkLabel(dialog, text = "Parent: ").pack(pady = 5)
+            ctk.CTkLabel(dialog, text = "Parent: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
             categories = self.db.get_categories()
             dropdown_names = ["None"]
             dropdown_ids = [None]
@@ -235,7 +251,7 @@ class BudgetPlannerApp(ctk.CTk):
             parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names, command = on_parent_selected)
             parent_option.pack(pady = 5)
     
-            ctk.CTkLabel(dialog, text = "Subcategory: ").pack(pady = 10)
+            ctk.CTkLabel(dialog, text = "Subcategory: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 10)
     
             child_option = ctk.CTkOptionMenu(dialog, state = "disabled")
             child_option.set("None")
@@ -284,8 +300,8 @@ class BudgetPlannerApp(ctk.CTk):
                 dialog.destroy()
                 self.load_categories()
 
-            ctk.CTkButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
-            ctk.CTkButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
+            CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
+            CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
 
 
     def on_delete_button_click(self):
@@ -319,7 +335,7 @@ class BudgetPlannerApp(ctk.CTk):
             self.load_categories()
     
     def show_warning(self, message):
-        popup = ctk.CTkToplevel(self)
+        popup = CustomTopLevel(self)
         popup.title("Warning")
         popup.geometry("300x150")
     
@@ -327,18 +343,18 @@ class BudgetPlannerApp(ctk.CTk):
         popup.grab_set()
         popup.focus_force()
     
-        label = ctk.CTkLabel(popup, text = message, wraplength = 250)
+        label = ctk.CTkLabel(popup, text = message, text_color = "alice blue", font = ("Roboto", 15), wraplength = 250)
         label.pack(pady = 20)
         
         def close_popup():
             popup.destroy()
             
-        ok_button = ctk.CTkButton(popup, text = "OK", command = close_popup)
+        ok_button = CustomButton(popup, text = "OK", command = close_popup)
         ok_button.pack(pady = 10)
     
     def ask_confirmation(self, message):
         result = [False]
-        popup = ctk.CTkToplevel(self)
+        popup = CustomTopLevel(self)
         popup.title("Warning")
         popup.geometry("300x150")
 
@@ -346,7 +362,7 @@ class BudgetPlannerApp(ctk.CTk):
         popup.grab_set()
         popup.focus_force()
 
-        label = ctk.CTkLabel(popup, text = message, wraplength = 250)
+        label = ctk.CTkLabel(popup, text = message, text_color = "alice blue", font = ("Roboto", 15), wraplength = 250)
         label.pack(pady = 20)
         
         def confirm():
@@ -355,21 +371,38 @@ class BudgetPlannerApp(ctk.CTk):
         def close_popup():
             popup.destroy()
 
-        confirm_button = ctk.CTkButton(popup, text = "Confirm", command = confirm)
+        confirm_button = CustomButton(popup, text = "Confirm", command = confirm)
         confirm_button.pack(pady = 0)
         
-        cancel_button = ctk.CTkButton(popup, text = "Cancel", command = close_popup)
+        cancel_button = CustomButton(popup, text = "Cancel", command = close_popup)
         cancel_button.pack(pady = 10)
         
         popup.wait_window()
         return result[0]
     
-    
-
-           
+class CustomButton(ctk.CTkButton):
+    def __init__(self, master=None, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.configure(width = 140,
+                    height = 30,
+                    border_width = 2,
+                    border_color = "LightSkyBlue1",
+                    fg_color = "RoyalBlue3",
+                    text_color = "LightSkyBlue1")
         
+        def on_enter(event):
+            self.configure(text_color = "alice blue", border_color = "alice blue", fg_color = "navy")
+            
+        def on_leave(event):
+            self.configure(text_color = "LightSkyBlue1", fg_color = "RoyalBlue3", border_color = "LightSkyBlue1")
+            
+        self.bind("<Enter>", on_enter)
+        self.bind("<Leave>", on_leave)
     
-    
+class CustomTopLevel(ctk.CTkToplevel):
+    def __init__(self, master=None, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.configure(fg_color = "midnight blue")
 
 if __name__ == "__main__":
     app = BudgetPlannerApp()
