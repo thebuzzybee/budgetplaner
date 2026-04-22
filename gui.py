@@ -8,11 +8,16 @@ class BudgetPlannerApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Budget Planer")
-        self.geometry("1000x600")
+        self.geometry("750x600")
         self.configure(fg_color = ("SkyBlue1", "SkyBlue4"))
         
         self.db = DatabaseManager()
         self.db.initialize_db()
+        self.selected_row = None
+        self.selected_category_id = None
+        self.selected_subcategory_row = None
+        self.current_viewed_parent_id = None
+        self.current_selected_child_id = None
 
         self.create_widgets()
         
@@ -55,20 +60,9 @@ class BudgetPlannerApp(ctk.CTk):
                                                     height = 400,
                                                     fg_color = "RoyalBlue3")
 
-        frame_tree = ctk.CTkFrame(self.tab_categories)
-        frame_tree.pack(fill="both", expand=True, padx=10, pady=10)
-
-        self.tree = ttk.Treeview(frame_tree, columns=("ID", "Parent-ID"), show="tree headings")
-        self.tree.heading("#0", text="Category")
-        self.tree.heading("ID", text="ID")
-        self.tree.heading("Parent-ID", text="Parent")
-        self.tree.column("#0", width=200)
-        self.tree.column("ID", width=0, stretch = False)
-        self.tree.column("Parent-ID", width=80)
-        self.tree.pack(fill="both", expand=True)
         
-        frame_buttons = ctk.CTkFrame(self.tab_categories)
-        frame_buttons.pack(fill="x", padx = 10, pady = 10)
+        
+        
         
         button_add = CustomButton(self.button_bar, text = "Add")
         #button_add = CTkButton(self.left_frame, text = "Add Category", width = 140, height = 30, border_width = 2, border_color = "LightSkyBlue1", fg_color = "RoyalBlue3", hover_color = "navy", text_color = "LightSkyBlue1")
@@ -91,13 +85,14 @@ class BudgetPlannerApp(ctk.CTk):
         button_del.configure(command = self.on_delete_button_click)
         
         self.load_categories()
-    
-    
-        
+
+
+
     def load_categories(self):
         for widget in self.category_view.winfo_children():
             widget.destroy()
 
+        self.selected_row = None
         roots = self.db.get_categories(parent_id=None)
     
         for cat_id, name, _ in roots:
@@ -111,7 +106,77 @@ class BudgetPlannerApp(ctk.CTk):
                 height=35
             )
             row.pack(fill="x", pady=2)
-            row.configure(command=lambda cid=cat_id: self.show_category_detail(cid))            
+
+            if cat_id == self.current_viewed_parent_id:
+                row.configure(fg_color="RoyalBlue1")
+                self.selected_row = row
+                self.selected_category_id = cat_id
+    
+            row.configure(command=lambda cid=cat_id, btn=row: self.on_parent_click(cid, btn))
+
+    def on_parent_click(self, category_id, button):
+        self.selected_subcategory_row = None
+        if self.selected_row is not None:
+            self.selected_row.configure(fg_color="transparent")
+    
+        button.configure(fg_color="RoyalBlue1")
+        self.selected_row = button
+        self.selected_category_id = category_id
+    
+        # Open detail view
+        self.show_category_detail(category_id)
+    
+    def show_category_detail(self, category_id):
+        self.current_viewed_parent_id = category_id
+        for widget in self.right_frame.winfo_children():
+            widget.destroy()
+    
+        result = self.db.get_category_by_id(category_id)
+        if not result:
+            return
+        name, parent_id = result
+    
+        header = ctk.CTkFrame(self.right_frame, fg_color="RoyalBlue2")
+        header.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(header, text=name, font=("Roboto", 24, "bold"), text_color="alice blue").pack(pady=15)
+    
+        ctk.CTkLabel(self.right_frame, text="Subcategories:", text_color = "alice blue",font=("Roboto", 14, "bold")).pack(anchor="w", padx=10, pady=(10,5))
+    
+        children = self.db.get_children(category_id)
+    
+        if not children:
+            ctk.CTkLabel(self.right_frame, text="No subcategories", text_color="alice blue").pack(padx=20)
+        else:
+            for child_id, child_name in children:
+                self._show_child_row(child_id, child_name, indent=0)
+
+    def _show_child_row(self, category_id, name, indent=0):
+        left_pad = 20 + (indent * 20)
+
+        row = ctk.CTkButton(
+            self.right_frame,
+            text=name,
+            anchor="w",
+            fg_color="transparent",
+            hover_color="RoyalBlue2",
+            text_color="white",
+            height=25
+        )
+        row.pack(fill="x", padx=(left_pad, 20), pady=1)
+    
+        row.configure(command=lambda cid=category_id, btn=row: self.on_subcategory_click(cid, btn))
+    
+        grandchildren = self.db.get_children(category_id)
+        for grandchild_id, grandchild_name in grandchildren:
+            self._show_child_row(grandchild_id, grandchild_name, indent=indent+1)
+
+    def on_subcategory_click(self, category_id, button):
+        if self.selected_subcategory_row is not None:
+            self.selected_subcategory_row.configure(fg_color="transparent")
+    
+        button.configure(fg_color="RoyalBlue1")
+        self.selected_subcategory_row = button
+        self.selected_category_id = category_id
      
     def open_add_category_dialog(self):
         dialog = CustomTopLevel(self)
@@ -133,39 +198,47 @@ class BudgetPlannerApp(ctk.CTk):
         for category_id, name, parent_id in categories:
             dropdown_names.append(name)
             dropdown_ids.append(category_id)
-        
+
+
         def on_parent_selected(selected_parent_name):
             index = dropdown_names.index(selected_parent_name)
             parent_id = dropdown_ids[index]
-            
+    
             if self.db.has_children(parent_id):
                 children = self.db.get_children(parent_id)
-
                 self.child_names = ["None"]
                 self.child_ids = [None]
-                
                 for cat_id, name in children:
                     self.child_names.append(name)
                     self.child_ids.append(cat_id)
-
                 child_option.configure(values=self.child_names, state="normal")
                 child_option.set("None")
-                
             else:
                 child_option.configure(values=["None"], state="disabled")
                 child_option.set("None")
                     
-            print(f"Selected parent: {selected_parent_name}")
               
         parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names, command = on_parent_selected)
         parent_option.pack(pady = 5)
 
         ctk.CTkLabel(dialog, text = "Subcategory: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 10)
         
-        child_option = ctk.CTkOptionMenu(dialog, state = "disabled")
+        child_option = ctk.CTkOptionMenu(dialog, values=["None"], state = "disabled")
         child_option.set("None")
         child_option.pack(pady = 5)
+
+        if self.current_viewed_parent_id is not None:
+            if self.current_viewed_parent_id in dropdown_ids:
+                index = dropdown_ids.index(self.current_viewed_parent_id)
+                parent_name = dropdown_names[index]
+                parent_option.set(parent_name)
+                on_parent_selected(parent_name)
         
+                if self.selected_category_id in self.child_ids:
+                    
+                    child_index = self.child_ids.index(self.selected_category_id)
+                    child_option.set(self.child_names[child_index])
+                
         def save():
             selected_name = name_entry.get().strip()
             if not selected_name:
@@ -185,137 +258,136 @@ class BudgetPlannerApp(ctk.CTk):
             self.db.add_category(selected_name, parent_id)
             dialog.destroy()
             self.load_categories()
+
+            if self.current_viewed_parent_id and parent_id == self.current_viewed_parent_id:
+                self.show_category_detail(self.current_viewed_parent_id)
             
         CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
         CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
 
     def open_edit_category_dialog(self):
-        selected = self.tree.selection()
-        if len(selected) == 0:
+        if self.selected_category_id is None:
             self.show_warning("Please select a category to edit")
-        elif len(selected) > 1:
-            self.show_warning("Please select only one category to edit")
-        else:
-            selected_iid = selected[0]
-            values = self.tree.item(selected_iid, "values")
-            category_id_being_edited = int(values[0])
-            result = self.db.get_category_by_id(category_id_being_edited)
-            current_name, current_parent_id = result
-            dialog = ctk.CTkToplevel(self)
-            dialog.transient(self)
-            dialog.grab_set()
-            dialog.focus_force()
-            dialog.title("Edit Category")
-            dialog.geometry("500x300")
+            return
+    
+        category_id_being_edited = self.selected_category_id
+        result = self.db.get_category_by_id(category_id_being_edited)
+        if not result:
+            return
+    
+        current_name, current_parent_id = result
+        dialog = ctk.CTkToplevel(self, fg_color = "RoyalBlue3")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.focus_force()
+        dialog.title("Edit Category")
+        dialog.geometry("500x350")
 
-            ctk.CTkLabel(dialog, text = "Name: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
-            name_entry = ctk.CTkEntry(dialog)
-            name_entry.insert(0, current_name)
-            name_entry.pack(pady = 5)
+        ctk.CTkLabel(dialog, text = "Name: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
+        name_entry = ctk.CTkEntry(dialog)
+        name_entry.insert(0, current_name)
+        name_entry.pack(pady = 5)
 
-            ctk.CTkLabel(dialog, text = "Parent: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
-            categories = self.db.get_categories()
-            dropdown_names = ["None"]
-            dropdown_ids = [None]
-    
-            for category_id, name, parent_id in categories:
-                if category_id != category_id_being_edited:
-                    dropdown_names.append(name)
-                    dropdown_ids.append(category_id)
-    
-            def on_parent_selected(selected_parent_name):
-                index = dropdown_names.index(selected_parent_name)
-                parent_id = dropdown_ids[index]
-    
-                if self.db.has_children(parent_id):
-                    children = self.db.get_children(parent_id)
-    
-                    self.child_names = ["None"]
-                    self.child_ids = [None]
-    
-                    for cat_id, name in children:
-                        if cat_id != category_id_being_edited:
-                            self.child_names.append(name)
-                            self.child_ids.append(cat_id)
-    
-                    child_option.configure(values=self.child_names, state="normal")
-                    child_option.set("None")
-    
-                else:
-                    child_option.configure(values=["None"], state="disabled")
-                    child_option.set("None")
-    
-                print(f"Selected parent: {selected_parent_name}")
-    
-    
-            parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names, command = on_parent_selected)
-            parent_option.pack(pady = 5)
-    
-            ctk.CTkLabel(dialog, text = "Subcategory: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 10)
-    
-            child_option = ctk.CTkOptionMenu(dialog, state = "disabled")
-            child_option.set("None")
-            child_option.pack(pady = 5)
+        ctk.CTkLabel(dialog, text = "Parent: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 5)
+        categories = self.db.get_categories()
+        dropdown_names = ["None"]
+        dropdown_ids = [None]
 
-            if current_parent_id is None:
-                parent_option.set("None")
-                child_option.configure(state="disabled")
+        for category_id, name, parent_id in categories:
+            if category_id != category_id_being_edited:
+                dropdown_names.append(name)
+                dropdown_ids.append(category_id)
+
+        def on_parent_selected(selected_parent_name):
+            index = dropdown_names.index(selected_parent_name)
+            parent_id = dropdown_ids[index]
+
+            if self.db.has_children(parent_id):
+                children = self.db.get_children(parent_id)
+
+                self.child_names = ["None"]
+                self.child_ids = [None]
+
+                for cat_id, name in children:
+                    if cat_id != category_id_being_edited:
+                        self.child_names.append(name)
+                        self.child_ids.append(cat_id)
+
+                child_option.configure(values=self.child_names, state="normal")
+                child_option.set("None")
+
             else:
-            
-                if current_parent_id in dropdown_ids:
-                    index = dropdown_ids.index(current_parent_id)
-                    root_name = dropdown_names[index]
-                    parent_option.set(root_name)
-                    on_parent_selected(root_name)
-                    child_option.set("None")
-                else:
-                    root_id = self.db.get_root_ancestor(current_parent_id)                
-                    root_index = dropdown_ids.index(root_id)
-                    root_name = dropdown_names[root_index]
-                    parent_option.set(root_name)
-                    on_parent_selected(root_name)
-                    if current_parent_id in self.child_ids:
-                        child_index = self.child_ids.index(current_parent_id)
-                        child_option.set(self.child_names[child_index])
-            def save():
-                selected_name = name_entry.get().strip()
-                if not selected_name:
-                    return
-                selected_parent_name = parent_option.get()
-                if selected_parent_name == "None":
-                    new_parent_id = None
-                else:
-                    if child_option.get() == "None" or child_option.cget("state") == "disabled":
-                        index = dropdown_names.index(selected_parent_name)
-                        new_parent_id = dropdown_ids[index]
-                    else:
-                        index = self.child_names.index(child_option.get())
-                        new_parent_id = self.child_ids[index]
-                if new_parent_id != current_parent_id:  
-                    if self.db.has_children(category_id_being_edited):
-                        self.show_warning("Cannot move: category has subcategories. Delete or move subcategories first.")
-                        return
-    
-                self.db.update_category(category_id_being_edited, selected_name, new_parent_id)
-                dialog.destroy()
-                self.load_categories()
+                child_option.configure(values=["None"], state="disabled")
+                child_option.set("None")
 
-            CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
-            CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
+            print(f"Selected parent: {selected_parent_name}")
+
+
+        parent_option = ctk.CTkOptionMenu(dialog, values = dropdown_names, command = on_parent_selected)
+        parent_option.pack(pady = 5)
+
+        ctk.CTkLabel(dialog, text = "Subcategory: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 10)
+
+        child_option = ctk.CTkOptionMenu(dialog, state = "disabled")
+        child_option.set("None")
+        child_option.pack(pady = 5)
+
+        if current_parent_id is None:
+            parent_option.set("None")
+            child_option.configure(state="disabled")
+        else:
+        
+            if current_parent_id in dropdown_ids:
+                index = dropdown_ids.index(current_parent_id)
+                root_name = dropdown_names[index]
+                parent_option.set(root_name)
+                on_parent_selected(root_name)
+                child_option.set("None")
+            else:
+                root_id = self.db.get_root_ancestor(current_parent_id)                
+                root_index = dropdown_ids.index(root_id)
+                root_name = dropdown_names[root_index]
+                parent_option.set(root_name)
+                on_parent_selected(root_name)
+                if current_parent_id in self.child_ids:
+                    child_index = self.child_ids.index(current_parent_id)
+                    child_option.set(self.child_names[child_index])
+        def save():
+            selected_name = name_entry.get().strip()
+            if not selected_name:
+                return
+            selected_parent_name = parent_option.get()
+            if selected_parent_name == "None":
+                new_parent_id = None
+            else:
+                if child_option.get() == "None" or child_option.cget("state") == "disabled":
+                    index = dropdown_names.index(selected_parent_name)
+                    new_parent_id = dropdown_ids[index]
+                else:
+                    index = self.child_names.index(child_option.get())
+                    new_parent_id = self.child_ids[index]
+            if new_parent_id != current_parent_id:  
+                if self.db.has_children(category_id_being_edited):
+                    self.show_warning("Cannot move: category has subcategories. Delete or move subcategories first.")
+                    return
+
+            self.db.update_category(category_id_being_edited, selected_name, new_parent_id)
+            dialog.destroy()
+            self.load_categories()
+
+            if self.current_viewed_parent_id:
+                self.show_category_detail(self.current_viewed_parent_id)
+
+        CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
+        CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
 
 
     def on_delete_button_click(self):
-        selected = self.tree.selection()
-        if len(selected) == 0:
+        if self.selected_category_id is None:
             self.show_warning("Please select a category to delete")
             return
-        elif len(selected) > 1:
-            self.show_warning("Please select only one category to delete")
-            return
     
-        selected_iid = selected[0]
-        values = self.tree.item(selected_iid, "values")
-        category_id = int(values[0])
+        category_id = self.selected_category_id
 
         result = self.db.get_category_by_id(category_id)
         name = result[0]
@@ -332,7 +404,12 @@ class BudgetPlannerApp(ctk.CTk):
     
         if confirmed:
             self.db.delete_category_recursive(category_id)
+            self.selected_row = None
+            self.selected_category_id = None
             self.load_categories()
+
+            if self.current_viewed_parent_id:
+                self.show_category_detail(self.current_viewed_parent_id)
     
     def show_warning(self, message):
         popup = CustomTopLevel(self)
