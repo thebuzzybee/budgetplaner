@@ -203,11 +203,13 @@ class BudgetPlannerApp(ctk.CTk):
         def on_parent_selected(selected_parent_name):
             index = dropdown_names.index(selected_parent_name)
             parent_id = dropdown_ids[index]
-    
+            
+            self.child_names = ["None"]
+            self.child_ids = [None]
+            
             if self.db.has_children(parent_id):
                 children = self.db.get_children(parent_id)
-                self.child_names = ["None"]
-                self.child_ids = [None]
+                
                 for cat_id, name in children:
                     self.child_names.append(name)
                     self.child_ids.append(cat_id)
@@ -301,13 +303,12 @@ class BudgetPlannerApp(ctk.CTk):
         def on_parent_selected(selected_parent_name):
             index = dropdown_names.index(selected_parent_name)
             parent_id = dropdown_ids[index]
-
+            
+            self.child_names = ["None"]
+            self.child_ids = [None]
+            
             if self.db.has_children(parent_id):
                 children = self.db.get_children(parent_id)
-
-                self.child_names = ["None"]
-                self.child_ids = [None]
-
                 for cat_id, name in children:
                     if cat_id != category_id_being_edited:
                         self.child_names.append(name)
