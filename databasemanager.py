@@ -139,25 +139,25 @@ class DatabaseManager:
 
         return count
     
-    def add_transaction(self, date, amount, type, category_id, description = None):
+    def add_transaction(self, date, amount, transaction_type, category_id, description = None):
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO transactions (date, amount, type, category_id, description)
             VALUES (?, ?, ?, ?, ?)
-        """, (date, amount, type, category_id, description))
+        """, (date, amount, transaction_type, category_id, description))
         conn.commit()
         conn.close()
 
-    def get_transactions(self, type = None, category_id = None, start_date = None, end_date = None, search_text = None, order_by = None, order_dir = "ASC"):
+    def get_transactions(self, transaction_type = None, category_id = None, start_date = None, end_date = None, search_text = None, order_by = None, order_dir ="ASC"):
         conn = self._get_connection()
         cursor = conn.cursor()
 
         query = "SELECT * FROM transactions WHERE 1=1"
         params = []
-        if type is not None:
+        if transaction_type is not None:
             query += " AND type = ?"
-            params.append(type)
+            params.append(transaction_type)
 
         if category_id is not None:
             query += " AND category_id = ?"
@@ -205,7 +205,7 @@ class DatabaseManager:
         cursor.execute(""" SELECT 1 FROM categories WHERE parent_id = ? LIMIT 1 """, (category_id,))
         result = cursor.fetchone()
         conn.close()
-        return result if not None else False
+        return result is not None
     
 if __name__ == "__main__":
     db.initialize_db()
