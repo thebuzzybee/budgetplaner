@@ -5,7 +5,10 @@ class DatabaseManager:
         self.db_path = db_path
         
     def _get_connection(self):
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
+        return conn
 
     def initialize_db(self):
         conn = self._get_connection()

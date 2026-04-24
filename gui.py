@@ -86,16 +86,25 @@ class BudgetPlannerApp(ctk.CTk):
         
         self.load_categories()
 
-
+    def _build_category_tree(self):
+        flat_list = self.db.get_all_categories()
+        tree_dict = {}
+        for cat_id, name, parent_id in flat_list:
+            tree_dict.setdefault(parent_id, []).append((name, cat_id))
+        return tree_dict
+        
+                
+        
 
     def load_categories(self):
         for widget in self.category_view.winfo_children():
             widget.destroy()
 
         self.selected_row = None
-        roots = self.db.get_categories(parent_id=None)
+        self.category_tree = self._build_category_tree()
+        roots = self.category_tree.get(None, [])
     
-        for cat_id, name, _ in roots:
+        for cat_id, name in roots:
             row = ctk.CTkButton(
                 self.category_view,
                 text=name,
