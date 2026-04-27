@@ -2,7 +2,7 @@
 from customtkinter import CTkButton, CTkToplevel
 
 from databasemanager import DatabaseManager
-from tkinter import ttk
+
 
 class BudgetPlannerApp(ctk.CTk):
     def __init__(self):
@@ -90,7 +90,7 @@ class BudgetPlannerApp(ctk.CTk):
         flat_list = self.db.get_all_categories()
         tree_dict = {}
         for cat_id, name, parent_id in flat_list:
-            tree_dict.setdefault(parent_id, []).append((name, cat_id))
+            tree_dict.setdefault(parent_id, []).append((cat_id, name))
         return tree_dict
         
                 
@@ -132,11 +132,12 @@ class BudgetPlannerApp(ctk.CTk):
         self.selected_row = button
         self.selected_category_id = category_id
     
-        # Open detail view
+        
         self.show_category_detail(category_id)
     
     def show_category_detail(self, category_id):
         self.current_viewed_parent_id = category_id
+        self.selected_subcategory_row = None
         for widget in self.right_frame.winfo_children():
             widget.destroy()
     
@@ -151,7 +152,7 @@ class BudgetPlannerApp(ctk.CTk):
     
         ctk.CTkLabel(self.right_frame, text="Subcategories:", text_color = "alice blue",font=("Roboto", 14, "bold")).pack(anchor="w", padx=10, pady=(10,5))
     
-        children = self.db.get_children(category_id)
+        children = self.category_tree.get(category_id, [])
     
         if not children:
             ctk.CTkLabel(self.right_frame, text="No subcategories", text_color="alice blue").pack(padx=20)
@@ -175,7 +176,7 @@ class BudgetPlannerApp(ctk.CTk):
     
         row.configure(command=lambda cid=category_id, btn=row: self.on_subcategory_click(cid, btn))
     
-        grandchildren = self.db.get_children(category_id)
+        grandchildren = self.category_tree.get(category_id, [])
         for grandchild_id, grandchild_name in grandchildren:
             self._show_child_row(grandchild_id, grandchild_name, indent=indent+1)
 
@@ -270,7 +271,7 @@ class BudgetPlannerApp(ctk.CTk):
             dialog.destroy()
             self.load_categories()
 
-            if self.current_viewed_parent_id and parent_id == self.current_viewed_parent_id:
+            if self.current_viewed_parent_id:
                 self.show_category_detail(self.current_viewed_parent_id)
             
         CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
