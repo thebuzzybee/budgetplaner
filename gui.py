@@ -84,8 +84,31 @@ class BudgetPlannerApp(ctk.CTk):
         button_del.pack(side="left", padx = 5)
         button_del.configure(command = self.on_delete_button_click)
         
+        self.setup_transactions_tab()
         self.load_categories()
 
+    def setup_transactions_tab(self):
+        self.transaction_control_frame = ctk.CTkFrame(self.tab_transactions, fg_color = "transparent")
+        self.transaction_control_frame.pack(fill="x", padx=10, pady=(10, 5))
+        
+        new_transaction_button = CustomButton(self.transaction_control_frame, text = "New Transaction", command = self.open_new_transaction_dialog)
+        new_transaction_button.pack(side="left", padx = 5)
+        
+        self.transaction_overview_frame = ctk.CTkFrame(self.tab_transactions, fg_color = "midnight blue")
+        self.transaction_overview_frame.pack(fill = "both", expand = True, padx = 10, pady = 10)
+        
+        self.transaction_overview = ctk.CTkScrollableFrame(self.transaction_overview_frame, 
+                                                                 fg_color = "RoyalBlue3", 
+                                                                 label_text = "Category Overview", 
+                                                                 label_text_color = "alice blue", 
+                                                                 label_fg_color = "RoyalBlue1",
+                                                                 scrollbar_button_color = "RoyalBlue1" ,
+                                                                 scrollbar_button_hover_color = "RoyalBlue4")
+        self.transaction_overview.pack(side = "top", fill = "both", expand = True, padx = 5, pady = 5)
+    
+    def open_new_transaction_dialog(self):
+        pass
+    
     def _build_category_tree(self):
         flat_list = self.db.get_all_categories()
         tree_dict = {}
