@@ -98,16 +98,44 @@ class BudgetPlannerApp(ctk.CTk):
         self.transaction_overview_frame.pack(fill = "both", expand = True, padx = 10, pady = 10)
         
         self.transaction_overview = ctk.CTkScrollableFrame(self.transaction_overview_frame, 
-                                                                 fg_color = "RoyalBlue3", 
-                                                                 label_text = "Category Overview", 
-                                                                 label_text_color = "alice blue", 
-                                                                 label_fg_color = "RoyalBlue1",
-                                                                 scrollbar_button_color = "RoyalBlue1" ,
-                                                                 scrollbar_button_hover_color = "RoyalBlue4")
+                                                                fg_color = "RoyalBlue3", 
+                                                                label_text = "Transaction Overview", 
+                                                                label_text_color = "alice blue", 
+                                                                label_fg_color = "RoyalBlue1",
+                                                                scrollbar_button_color = "RoyalBlue1" ,
+                                                                scrollbar_button_hover_color = "RoyalBlue4")
         self.transaction_overview.pack(side = "top", fill = "both", expand = True, padx = 5, pady = 5)
-    
+        self.category_segmented_button = ctk.CTkSegmentedButton(self.transaction_overview, 
+                                                                values = ["All", "Expense", "Income"], 
+                                                                width = 250,
+                                                                height = 30,
+                                                                fg_color = "RoyalBlue4", 
+                                                                selected_color = "RoyalBlue1", 
+                                                                selected_hover_color = "navy",
+                                                                unselected_color = "LightSkyBlue3",
+                                                                unselected_hover_color = "navy",
+                                                                text_color = "alice blue", 
+                                                                dynamic_resizing = False)
+        self.category_segmented_button.set("All")
+        self.category_segmented_button.pack(side = "top", padx = 5)
     def open_new_transaction_dialog(self):
-        pass
+        dialog = CustomTopLevel(self)
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.focus_force()
+        dialog.title("New Transaction")
+        dialog.geometry("500x320")
+
+        date_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
+        date_frame.pack(fill = "x", pady = 5)
+        
+        ctk.CTkLabel(date_frame, text = "Date: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 10)
+        ctk.CTkLabel(date_frame, text = "Day: ", text_color = "alice blue", font = ("Roboto", 15)).pack(side = "left", padx = 20, pady = 5)
+        ctk.CTkLabel(date_frame, text = "Month: ", text_color = "alice blue", font = ("Roboto", 15)).pack(side = "left", padx = 50, pady = 5)
+        ctk.CTkLabel(date_frame, text = "Year: ", text_color = "alice blue", font = ("Roboto", 15)).pack(side = "left", padx = 10, pady = 5)
+        
+        
+        day_entry = ctk.CTkEntry
     
     def _build_category_tree(self):
         flat_list = self.db.get_all_categories()
