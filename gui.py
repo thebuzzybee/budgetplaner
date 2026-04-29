@@ -124,18 +124,72 @@ class BudgetPlannerApp(ctk.CTk):
         dialog.grab_set()
         dialog.focus_force()
         dialog.title("New Transaction")
-        dialog.geometry("500x320")
-
+        dialog.geometry("650x320")
+        
+        
+        income_expense_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
+        income_expense_frame.pack(fill = "x", pady = 5)
         date_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
         date_frame.pack(fill = "x", pady = 5)
+        amount_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
+        amount_frame.pack(fill = "x", pady = 5)
+        category_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
+        category_frame.pack(fill = "x", pady = 5)
+       
+        self.income_expense_button = ctk.CTkSegmentedButton(income_expense_frame, 
+                                                            values = ["Expense", "Income"], 
+                                                            width = 250,
+                                                            height = 30,
+                                                            fg_color = "RoyalBlue4",
+                                                            selected_color = "RoyalBlue1",
+                                                            selected_hover_color = "navy",
+                                                            unselected_color = "LightSkyBlue3",
+                                                            unselected_hover_color = "navy",
+                                                            text_color = "alice blue",
+                                                            dynamic_resizing = False)
+        self.income_expense_button.set("Expense")
+        self.income_expense_button.pack(padx = 5, pady = 5)
         
-        ctk.CTkLabel(date_frame, text = "Date: ", text_color = "alice blue", font = ("Roboto", 20)).pack(pady = 10)
-        ctk.CTkLabel(date_frame, text = "Day: ", text_color = "alice blue", font = ("Roboto", 15)).pack(side = "left", padx = 20, pady = 5)
-        ctk.CTkLabel(date_frame, text = "Month: ", text_color = "alice blue", font = ("Roboto", 15)).pack(side = "left", padx = 50, pady = 5)
-        ctk.CTkLabel(date_frame, text = "Year: ", text_color = "alice blue", font = ("Roboto", 15)).pack(side = "left", padx = 10, pady = 5)
+        ctk.CTkLabel(date_frame, text = "Date: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
+        self.day_entry = ctk.CTkEntry(date_frame, placeholder_text = "DD", width = 35)
+        self.day_entry.pack(side = "left", padx = 5, pady = 10)
+        self.month_entry = ctk.CTkEntry(date_frame, placeholder_text = "MM", width = 40)
+        self.month_entry.pack(side = "left", padx = 5, pady = 10)
+        self.year_entry = ctk.CTkEntry(date_frame, placeholder_text = "YYYY", width = 55)
+        self.year_entry.pack(side = "left", padx = 5, pady = 10)
+        ctk.CTkLabel(amount_frame, text = "Amount: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
+        self.amount_entry = ctk.CTkEntry(amount_frame, placeholder_text = "0,00 €", width = 55)
+        self.amount_entry.pack(side = "left", padx = 5, pady = 10)
+        ctk.CTkLabel(category_frame, text = "Category: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
+
+        all_cats = self.db.get_all_categories()
+        
+        self.parent_name = ["Select Parent"]
+        self.parent_ids = [None]
+        for cat_id, name, parent_id in all_cats:
+            if parent_id is None:
+                self.parent_name.append(name)
+                self.parent_ids.append(cat_id)
+                
+        self.children_name = ["Select Subcategory"]
+        self.children_ids = [None]
+        self.grandchildren_name = ["Select Sub-Subcategory"]
+        self.grandchildren_ids = [None]
+        
+        self.final_cat_id = None
+        
+        def on_parent_change(selected_name):
+            index = self.parent_name.index(selected_name)
+            parent_id = self.parent_ids[index]
+            
+        def save():
+            pass
+        
+        CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
+        CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
         
         
-        day_entry = ctk.CTkEntry
+        
     
     def _build_category_tree(self):
         flat_list = self.db.get_all_categories()
