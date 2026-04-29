@@ -161,26 +161,86 @@ class BudgetPlannerApp(ctk.CTk):
         self.amount_entry = ctk.CTkEntry(amount_frame, placeholder_text = "0,00 €", width = 55)
         self.amount_entry.pack(side = "left", padx = 5, pady = 10)
         ctk.CTkLabel(category_frame, text = "Category: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
-
-        all_cats = self.db.get_all_categories()
         
-        self.parent_name = ["Select Parent"]
+        
+        
+        
+        self.all_cats = self.db.get_all_categories()
+        
+        self.parent_names = ["Select Parent"]
         self.parent_ids = [None]
-        for cat_id, name, parent_id in all_cats:
+        for cat_id, name, parent_id in self.all_cats:
             if parent_id is None:
-                self.parent_name.append(name)
+                self.parent_names.append(name)
                 self.parent_ids.append(cat_id)
                 
-        self.children_name = ["Select Subcategory"]
+        self.children_names = ["Select Subcategory"]
         self.children_ids = [None]
-        self.grandchildren_name = ["Select Sub-Subcategory"]
+        self.grandchildren_names = ["Select Sub-Subcategory"]
         self.grandchildren_ids = [None]
         
         self.final_cat_id = None
         
         def on_parent_change(selected_name):
-            index = self.parent_name.index(selected_name)
-            parent_id = self.parent_ids[index]
+            if selected_name == "Select Parent":
+                return
+            index = self.parent_names.index(selected_name)
+            selected_parent_id = self.parent_ids[index]
+            
+            self.children_names = ["Select Subcategory"]
+            self.children_ids = [None]
+            
+            for cat_id, name, row_parent_id in self.all_cats:
+                if row_parent_id == selected_parent_id:
+                    self.children_names.append(name)
+                    self.children_ids.append(cat_id)
+                    
+            children_dropdown.configure(values = self.children_names)
+            children_dropdown.set("Select Subcategory")
+            
+            if len(self.children_names) > 1:
+                children_dropdown.configure(state = "normal")
+            else:
+                children_dropdown.configure(state = "disabled")
+                
+            self.final_cat_id = None
+        def on_child_change(selected_name):
+            index = self.children_names.index(selected_name)
+            selected_child_id = self.children_ids[index]
+            
+            self.grandchildren_names = ["Select Sub-Subcategory"]
+            self.grandchildren_ids = [None]
+            
+            for cat_id, name, row_parent_id in self.all_cats:
+                if row_parent_id == selected_child_id:
+                    self.grandchildren_names.append(name)
+                    self.grandchildren_ids.append(cat_id)
+                    
+            grandchildren_dropdown.configure(values = self.grandchildren_names)
+            grandchildren_dropdown.set("Select Sub-Subcategory")
+            
+            if len(self.grandchildren_names) > 1:
+                grandchildren_dropdown.configure(state = "normal")
+            else:
+                grandchildren_dropdown.configure(state = "disabled")
+            
+            self.final_cat_id = None
+        
+        
+        def on_grandchild_change(selected_name):
+            pass
+            
+        parent_dropdown = ctk.CTkOptionMenu(category_frame, values = self.parent_names, command = on_parent_change, width = 140)
+        parent_dropdown.pack(side="left", padx=5, pady=5)
+        parent_dropdown.set(self.parent_names[0])
+        
+        children_dropdown = ctk.CTkOptionMenu(category_frame, values = self.children_names, command = on_child_change, width = 140, state = "disabled")
+        children_dropdown.pack(side="left", padx=5, pady=5)
+        children_dropdown.set(self.children_names[0])
+        
+        grandchildren_dropdown = ctk.CTkOptionMenu(category_frame, values = self.grandchildren_names, command = on_grandchild_change, width = 140, state = "disabled")
+        grandchildren_dropdown.pack(side="left", padx=5, pady=5)
+        grandchildren_dropdown.set(self.grandchildren_names[0])
             
         def save():
             pass
