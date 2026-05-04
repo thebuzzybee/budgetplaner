@@ -124,7 +124,7 @@ class BudgetPlannerApp(ctk.CTk):
         dialog.grab_set()
         dialog.focus_force()
         dialog.title("New Transaction")
-        dialog.geometry("650x320")
+        dialog.geometry("650x420")
         
         
         income_expense_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
@@ -135,6 +135,8 @@ class BudgetPlannerApp(ctk.CTk):
         amount_frame.pack(fill = "x", pady = 5)
         category_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
         category_frame.pack(fill = "x", pady = 5)
+        description_frame = ctk.CTkFrame(dialog, fg_color = "transparent")
+        description_frame.pack(fill = "x", pady = 5)
        
         self.income_expense_button = ctk.CTkSegmentedButton(income_expense_frame, 
                                                             values = ["Expense", "Income"], 
@@ -228,7 +230,8 @@ class BudgetPlannerApp(ctk.CTk):
         
         
         def on_grandchild_change(selected_name):
-            pass
+            index = self.grandchildren_names.index(selected_name)
+            self.final_cat_id = self.grandchildren_ids[index]
             
         parent_dropdown = ctk.CTkOptionMenu(category_frame, values = self.parent_names, command = on_parent_change, width = 140)
         parent_dropdown.pack(side="left", padx=5, pady=5)
@@ -241,8 +244,14 @@ class BudgetPlannerApp(ctk.CTk):
         grandchildren_dropdown = ctk.CTkOptionMenu(category_frame, values = self.grandchildren_names, command = on_grandchild_change, width = 140, state = "disabled")
         grandchildren_dropdown.pack(side="left", padx=5, pady=5)
         grandchildren_dropdown.set(self.grandchildren_names[0])
+
+
+        ctk.CTkLabel(description_frame, text = "Description: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
+        self.description_entry = ctk.CTkEntry(description_frame, placeholder_text = "Description")
+        self.description_entry.pack(side="left", expand = True, fill = "x", padx=5, pady=5)
             
         def save():
+            print(self.final_cat_id)
             pass
         
         CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
