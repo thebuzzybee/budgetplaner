@@ -251,6 +251,17 @@ class BudgetPlannerApp(ctk.CTk):
         self.description_entry.pack(side="left", expand = True, fill = "x", padx=5, pady=5)
             
         def save():
+            raw_day = self.day_entry.get().strip()
+            raw_month = self.month_entry.get().strip()
+            raw_year = self.year_entry.get().strip()
+            raw_amount = self.amount_entry.get().strip().replace(" €", "")
+            raw_type = self.income_expense_button.get()
+            raw_description = self.description_entry.get() or None
+            
+            
+            if not (raw_day.isdigit() and raw_month.isdigit() and raw_year.isdigit()):
+                self.show_warning("Date has to contain only digits")
+                return
             print(self.final_cat_id)
             pass
         
