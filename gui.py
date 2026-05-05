@@ -107,9 +107,9 @@ class BudgetPlannerApp(ctk.CTk):
                                                                 label_fg_color = "RoyalBlue1",
                                                                 scrollbar_button_color = "RoyalBlue1" ,
                                                                 scrollbar_button_hover_color = "RoyalBlue4")
-        self.transaction_overview.pack(side = "left", padx = 5, pady = 5)
+        self.transaction_overview.pack(side = "left", expand = True, fill = "both", padx = (0,5), pady = 5)
         self.transaction_detail = ctk.CTkFrame(self.transaction_overview_frame, fg_color = "red")
-        self.transaction_detail.pack(side = "left", padx = 5, pady = 5)
+        self.transaction_detail.pack(side = "right", expand = True, fill = "both", padx = (0,5), pady = 5)
         self.category_segmented_button = ctk.CTkSegmentedButton(self.transaction_overview, 
                                                                 values = ["All", "Expense", "Income"], 
                                                                 width = 250,
@@ -295,14 +295,14 @@ class BudgetPlannerApp(ctk.CTk):
     
     
     def load_transactions(self):
-        for widget in self.transaction_overview_frame.winfo_children():
+        for widget in self.transaction_overview.winfo_children():
             widget.destroy()
             
         roots = self.db.get_transactions()
         print(roots)
         for _, date, amount, transaction_type, category_id, _ in roots:
             row = ctk.CTkButton(
-                self.transaction_overview_frame,
+                self.transaction_overview,
                 text=f" {category_id} | {date} | {transaction_type} | {amount:.2f}",
                 anchor="w",
                 fg_color="transparent",
