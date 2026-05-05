@@ -1,5 +1,8 @@
 ﻿import customtkinter as ctk
 from customtkinter import CTkButton, CTkToplevel
+import CTkCalendar as ctkc
+import ctkdateentry as ctkd
+from datetime import datetime
 
 from databasemanager import DatabaseManager
 
@@ -104,7 +107,9 @@ class BudgetPlannerApp(ctk.CTk):
                                                                 label_fg_color = "RoyalBlue1",
                                                                 scrollbar_button_color = "RoyalBlue1" ,
                                                                 scrollbar_button_hover_color = "RoyalBlue4")
-        self.transaction_overview.pack(side = "top", fill = "both", expand = True, padx = 5, pady = 5)
+        self.transaction_overview.pack(side = "left", padx = 5, pady = 5)
+        self.transaction_detail = ctk.CTkFrame(self.transaction_overview_frame, fg_color = "red")
+        self.transaction_detail.pack(side = "left", padx = 5, pady = 5)
         self.category_segmented_button = ctk.CTkSegmentedButton(self.transaction_overview, 
                                                                 values = ["All", "Expense", "Income"], 
                                                                 width = 250,
@@ -118,6 +123,7 @@ class BudgetPlannerApp(ctk.CTk):
                                                                 dynamic_resizing = False)
         self.category_segmented_button.set("All")
         self.category_segmented_button.pack(side = "top", padx = 5)
+        self.load_transactions()
     def open_new_transaction_dialog(self):
         dialog = CustomTopLevel(self)
         dialog.transient(self)
@@ -153,12 +159,12 @@ class BudgetPlannerApp(ctk.CTk):
         self.income_expense_button.pack(padx = 5, pady = 5)
         
         ctk.CTkLabel(date_frame, text = "Date: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
-        self.day_entry = ctk.CTkEntry(date_frame, placeholder_text = "DD", width = 35)
-        self.day_entry.pack(side = "left", padx = 5, pady = 10)
-        self.month_entry = ctk.CTkEntry(date_frame, placeholder_text = "MM", width = 40)
-        self.month_entry.pack(side = "left", padx = 5, pady = 10)
-        self.year_entry = ctk.CTkEntry(date_frame, placeholder_text = "YYYY", width = 55)
-        self.year_entry.pack(side = "left", padx = 5, pady = 10)
+        #self.day_entry = ctk.CTkEntry(date_frame, placeholder_text = "DD", width = 35)
+        #self.day_entry.pack(side = "left", padx = 5, pady = 10)
+        #self.month_entry = ctk.CTkEntry(date_frame, placeholder_text = "MM", width = 40)
+        #self.month_entry.pack(side = "left", padx = 5, pady = 10)
+        #self.year_entry = ctk.CTkEntry(date_frame, placeholder_text = "YYYY", width = 55)
+        #self.year_entry.pack(side = "left", padx = 5, pady = 10)
         ctk.CTkLabel(amount_frame, text = "Amount: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
         self.amount_entry = ctk.CTkEntry(amount_frame, placeholder_text = "0,00 €", width = 55)
         self.amount_entry.pack(side = "left", padx = 5, pady = 10)
@@ -244,6 +250,9 @@ class BudgetPlannerApp(ctk.CTk):
         grandchildren_dropdown = ctk.CTkOptionMenu(category_frame, values = self.grandchildren_names, command = on_grandchild_change, width = 140, state = "disabled")
         grandchildren_dropdown.pack(side="left", padx=5, pady=5)
         grandchildren_dropdown.set(self.grandchildren_names[0])
+        
+        self.date_entry = ctkd.CTkDateEntry(date_frame, width = 140)
+        self.date_entry.pack(side="left", padx=5, pady=5)
 
 
         ctk.CTkLabel(description_frame, text = "Description: ", text_color = "alice blue", font = ("Roboto", 20)).pack(side = "left", padx = 20, pady = 10)
@@ -251,22 +260,60 @@ class BudgetPlannerApp(ctk.CTk):
         self.description_entry.pack(side="left", expand = True, fill = "x", padx=5, pady=5)
             
         def save():
-            raw_day = self.day_entry.get().strip()
-            raw_month = self.month_entry.get().strip()
-            raw_year = self.year_entry.get().strip()
+            raw_date = self.date_entry.entry.get()
+            
+            try:
+                formatted_date = datetime.strptime(raw_date, "%d/%m/%Y").strftime("%Y-%m-%d")
+            except ValueError:
+                self.show_warning("Invalid date. Please pick from the calendar.")
+                return
+                
             raw_amount = self.amount_entry.get().strip().replace(" €", "")
+            raw_amount = raw_amount.replace(",", ".")
+            
+            try:
+                raw_amount = float(raw_amount)
+                if raw_amount < 0:
+                    self.show_warning("Amount must be a positive number.")
+                    return
+            except ValueError:
+                self.show_warning("Amount must be a number.")
+                return
+            
+            if self.final_cat_id is None:
+                self.show_warning("Please select a category.")
+                return
+                
             raw_type = self.income_expense_button.get()
             raw_description = self.description_entry.get() or None
-            
-            
-            if not (raw_day.isdigit() and raw_month.isdigit() and raw_year.isdigit()):
-                self.show_warning("Date has to contain only digits")
-                return
-            print(self.final_cat_id)
-            pass
+            self.db.add_transaction(formatted_date, raw_amount, raw_type, self.final_cat_id, raw_description)
+            self.load_transactions()
+            dialog.destroy()
         
         CustomButton(dialog, text="Save", command=save).pack(side="left", padx = (100,0), pady = 20)
         CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
+    
+    
+    def load_transactions(self):
+        for widget in self.transaction_overview_frame.winfo_children():
+            widget.destroy()
+            
+        roots = self.db.get_transactions()
+        print(roots)
+        for _, date, amount, transaction_type, category_id, _ in roots:
+            row = ctk.CTkButton(
+                self.transaction_overview_frame,
+                text=f" {category_id} | {date} | {transaction_type} | {amount:.2f}",
+                anchor="w",
+                fg_color="transparent",
+                hover_color="RoyalBlue1",
+                text_color="alice blue",
+                height=35
+            )
+            row.pack(fill="x", pady=2)
+        
+        
+            
         
         
         
