@@ -106,6 +106,17 @@ class BudgetPlannerApp(ctk.CTk):
         self.transaction_right_frame.pack(side = "right", expand = True, fill = "both")
         #self.transaction_filter_frame = ctk.CTkFrame(self.transaction_overview_frame, fg_color = "transparent")
         #self.transaction_filter_frame.pack(fill = "x")
+        
+        self.transaction_overview = ctk.CTkScrollableFrame(self.transaction_left_frame, 
+                                                                fg_color = "RoyalBlue3", 
+                                                                label_text = "Transaction Overview", 
+                                                                label_text_color = "alice blue", 
+                                                                label_fg_color = "RoyalBlue1",
+                                                                scrollbar_button_color = "RoyalBlue1" ,
+                                                                scrollbar_button_hover_color = "RoyalBlue4")
+        
+        self.transaction_detail = ctk.CTkFrame(self.transaction_right_frame, fg_color = "RoyalBlue3")
+        self.transaction_detail.pack(side = "right", expand = True, fill = "both", padx = 5, pady = 5)
         self.category_segmented_button = ctk.CTkSegmentedButton(self.transaction_left_frame,
                                                                 values = ["All", "Expense", "Income"],
                                                                 width = 250,
@@ -116,20 +127,11 @@ class BudgetPlannerApp(ctk.CTk):
                                                                 unselected_color = "LightSkyBlue3",
                                                                 unselected_hover_color = "navy",
                                                                 text_color = "alice blue",
-                                                                dynamic_resizing = False)
+                                                                dynamic_resizing = False,
+                                                                command=lambda selected_value: self.load_transactions(self.category_segmented_button.get()))
         self.category_segmented_button.set("All")
         self.category_segmented_button.pack(side = "top", padx = 5, pady = 5)
-        self.transaction_overview = ctk.CTkScrollableFrame(self.transaction_left_frame, 
-                                                                fg_color = "RoyalBlue3", 
-                                                                label_text = "Transaction Overview", 
-                                                                label_text_color = "alice blue", 
-                                                                label_fg_color = "RoyalBlue1",
-                                                                scrollbar_button_color = "RoyalBlue1" ,
-                                                                scrollbar_button_hover_color = "RoyalBlue4")
         self.transaction_overview.pack(side = "top", expand = True, fill = "both", padx = 5, pady = 5)
-        self.transaction_detail = ctk.CTkFrame(self.transaction_right_frame, fg_color = "RoyalBlue3")
-        self.transaction_detail.pack(side = "right", expand = True, fill = "both", padx = 5, pady = 5)
-        
     def open_new_transaction_dialog(self):
         dialog = CustomTopLevel(self)
         dialog.transient(self)
@@ -300,16 +302,19 @@ class BudgetPlannerApp(ctk.CTk):
         CustomButton(dialog, text="Cancel", command=dialog.destroy).pack(side="right", padx = (0,100), pady = 20)
     
     
-    def load_transactions(self):
+    def load_transactions(self, filter_type = "All"):
         for widget in self.transaction_overview.winfo_children():
             widget.destroy()
-            
-        roots = self.db.get_transactions()
-        print(roots)
-        for _, date, amount, transaction_type, category_id, _ in roots:
+        cat_map = {cid: name for cid, name, _ in self.db.get_all_categories()}
+        type_param = None if filter_type == "All" else filter_type    
+        transactions = self.db.get_transactions(transaction_type = type_param)
+        print(type_param)
+        print(transactions)
+        for transaction_id, date, amount, transaction_type, category_id, description in transactions:
+            cat_name = cat_map.get(category_id, "Unknown")
             row = ctk.CTkButton(
                 self.transaction_overview,
-                text=f" {category_id} | {date} | {transaction_type} | {amount:.2f}",
+                text=f" {cat_name} | {date} | {transaction_type} | {amount:.2f}",
                 anchor="w",
                 fg_color="transparent",
                 hover_color="RoyalBlue1",
