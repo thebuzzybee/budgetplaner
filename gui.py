@@ -21,6 +21,10 @@ class BudgetPlannerApp(ctk.CTk):
         self.selected_subcategory_row = None
         self.current_viewed_parent_id = None
         self.current_selected_child_id = None
+        self.current_viewed_transaction_id = None
+        self.selected_transaction_row = None
+        self.selected_transaction_id = None
+    
 
         self.create_widgets()
         
@@ -305,6 +309,8 @@ class BudgetPlannerApp(ctk.CTk):
     def load_transactions(self, filter_type = "All"):
         for widget in self.transaction_overview.winfo_children():
             widget.destroy()
+        self.current_viewed_transaction_id = None
+        self.selected_transaction_row = None
         cat_map = {cid: name for cid, name, _ in self.db.get_all_categories()}
         type_param = None if filter_type == "All" else filter_type    
         transactions = self.db.get_transactions(transaction_type = type_param)
@@ -322,10 +328,48 @@ class BudgetPlannerApp(ctk.CTk):
                 height=35
             )
             row.pack(fill="x", pady=2)
-        
-        
+            if transaction_id == self.current_viewed_transaction_id:
+                row.configure(fg_color="RoyalBlue1")
+                self.selected_transaction_row = row
+                self.selected_category_id = transaction_id
+            row.configure(command = lambda t=(transaction_id, date, amount, transaction_type, category_id, description): self.show_transaction_detail(t))
+    def show_transaction_detail(self, transaction_tuple):    
+        for widget in self.transaction_detail.winfo_children():
+            widget.destroy()
             
+        print(transaction_tuple)
+        transaction_id, date, amount, transaction_type, category_id, description = transaction_tuple
         
+        category_map = {cid: name for cid, name, _ in self.db.get_all_categories()}
+        category_name = category_map.get(category_id, "Unknown")
+        
+        formatted_date = datetime.strptime(date, "%Y-%m-%d").strftime("%d.%m.%Y")
+        formatted_amount = f"{amount:.2f} €"
+        display_desc = description if description else "No description"
+        display_type = transaction_type
+        
+        category_name_label = ctk.CTkLabel(self.transaction_detail, text = f"{category_name}", text_color = "alice blue", font = ("Roboto", 20))
+        category_name_label.pack(padx = 5, pady = 5)
+        
+        transaction_detail_label = ctk.CTkLabel(self.transaction_detail, text = f"{formatted_date} | {display_type}", text_color = "alice blue", font = ("Roboto", 15))
+        transaction_detail_label.pack(padx = 5, pady = 5)
+        
+        amount_label = ctk.CTkLabel(self.transaction_detail, text = f"{formatted_amount}", text_color = "alice blue", font = ("Roboto", 25))
+        amount_label.pack(padx = 5, pady = 5)
+        
+        description_label = ctk.CTkLabel(self.transaction_detail, text = f"{display_desc}", text_color = "alice blue", font = ("Roboto", 15))
+        description_label.pack(padx = 5, pady = 5)
+
+    def on_category_click(self, transaction_id, button):
+        if self.selected_transaction_row is not None:
+            self.selected_transaction_row.configure(fg_color="transparent")
+
+        button.configure(fg_color="RoyalBlue1")
+        self.selected_transaction_row = button
+        self.selected_transaction_id = transaction_id
+
+
+        self.show_transaction_detail(transaction_id)    
         
         
     
